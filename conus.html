@@ -4045,17 +4045,31 @@ function renderHeadline(){
   const phaseName=pretty(phase).replace('El Nino','El Niño').replace('La Nina','La Niña');
   const label = ev==='composite' ? phaseName+' phase composite' : phaseName+' — '+(eventInfo ? eventInfo[1].slice(0,7) : ev);
   document.getElementById('headline_title').textContent='Regional contributions — '+label;
-  document.getElementById('headline_desc').textContent='SiB4 is solid; CarbonTracker is hatched. Each stacked bar sums to the CONUS NEE anomaly for the selected '+(ev==='composite'?'phase composite.':'event.');
-  const traces=regions.map(region=>({
-    name:pretty(region), type:'bar', x:['SiB4','CarbonTracker'], y:[mapA[region]||0,mapB[region]||0],
-    marker:{
-      color:[REGION_COLORS[region],'rgba(255,255,255,0.06)'],
-      line:{color:[REGION_COLORS[region],REGION_COLORS[region]],width:[0,1.4]},
-      pattern:{shape:['','/'],fgcolor:[REGION_COLORS[region],REGION_COLORS[region]],bgcolor:['rgba(0,0,0,0)','rgba(255,255,255,0.96)'],solidity:[0.2,0.28],size:[8,8]}
-    },
-    hovertemplate:'<b>'+pretty(region)+'</b><br>%{x}<br>%{y:.3f} PgC yr⁻¹<extra></extra>'
-  }));
-  Plotly.react('headline',traces,{...layoutBase,barmode:'relative',bargap:0.36,margin:{l:60,r:12,t:20,b:95},yaxis:{title:'NEE anomaly (PgC yr⁻¹)',zeroline:true},xaxis:{tickangle:0},legend:{orientation:'h',y:-0.34,x:0,font:{size:9}}},{displayModeBar:false,responsive:true});
+  document.getElementById('headline_desc').textContent='SiB4 is solid; CarbonTracker is open/hatched. Each stacked bar sums to the CONUS NEE anomaly for the selected '+(ev==='composite'?'phase composite.':'event.');
+
+  // Use separate traces for SiB4 and CarbonTracker so Plotly renders the
+  // CarbonTracker hatch consistently.  offsetgroup keeps the two stacked
+  // bars side by side while barmode="relative" stacks the regional pieces.
+  const traces=[];
+  regions.forEach(region=>{
+    traces.push({
+      name:pretty(region), legendgroup:region, showlegend:true,
+      type:'bar', x:['SiB4'], y:[mapA[region]||0], offsetgroup:'SiB4',
+      marker:{color:REGION_COLORS[region], line:{color:REGION_COLORS[region],width:0.8}},
+      hovertemplate:'<b>'+pretty(region)+'</b><br>SiB4<br>%{y:.3f} PgC yr⁻¹<extra></extra>'
+    });
+    traces.push({
+      name:pretty(region)+' — CarbonTracker', legendgroup:region, showlegend:false,
+      type:'bar', x:['CarbonTracker'], y:[mapB[region]||0], offsetgroup:'CarbonTracker',
+      marker:{
+        color:'rgba(255,255,255,0.96)',
+        line:{color:REGION_COLORS[region],width:1.5},
+        pattern:{shape:'/',fgcolor:REGION_COLORS[region],bgcolor:'rgba(255,255,255,0.96)',solidity:0.28,size:8}
+      },
+      hovertemplate:'<b>'+pretty(region)+'</b><br>CarbonTracker<br>%{y:.3f} PgC yr⁻¹<extra></extra>'
+    });
+  });
+  Plotly.react('headline',traces,{...layoutBase,barmode:'relative',bargap:0.28,bargroupgap:0.06,margin:{l:60,r:12,t:20,b:95},yaxis:{title:'NEE anomaly (PgC yr⁻¹)',zeroline:true},xaxis:{tickangle:0},legend:{orientation:'h',y:-0.34,x:0,font:{size:9}}},{displayModeBar:false,responsive:true});
 }
 function update() { renderHeadline(); const phase=phaseSel.value; const A=selectedRegional('SiB4'), B=selectedRegional('CarbonTracker'); const mapA=Object.fromEntries(A.map(x=>[x.region,x.value])), mapB=Object.fromEntries(B.map(x=>[x.region,x.value])); const regs=regions.filter(r=>Number.isFinite(mapA[r])&&Number.isFinite(mapB[r])); const av=regs.map(r=>mapA[r]), bv=regs.map(r=>mapB[r]); const ta=av.reduce((x,y)=>x+y,0), tb=bv.reduce((x,y)=>x+y,0), dif=ta-tb; const signCount=regs.filter(r=>Math.sign(mapA[r])===Math.sign(mapB[r])).length; const r=corr(av,bv); const dv=regs.map(r=>mapA[r]-mapB[r]); const abs=dv.map(Math.abs); const mae=mean(abs); const maxi=abs.length?abs.indexOf(Math.max(...abs)):-1;
  document.getElementById('m_sib').textContent=fmt(ta); document.getElementById('m_ct').textContent=fmt(tb); document.getElementById('m_diff').textContent=fmt(dif); document.getElementById('d_absconus').textContent=fmt(Math.abs(dif)); document.getElementById('d_conussign').textContent=Math.sign(ta)===Math.sign(tb)?'Yes':'No'; document.getElementById('d_sign').textContent=signCount+'/'+regs.length; document.getElementById('d_corr').textContent=fmt(r,2); document.getElementById('d_mae').textContent=fmt(mae); document.getElementById('d_largest').textContent=maxi>=0?pretty(regs[maxi])+' ('+fmt(abs[maxi])+')':'—';
