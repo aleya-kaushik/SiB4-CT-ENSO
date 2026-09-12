@@ -1,6 +1,6 @@
 # ENSO Terrestrial Carbon Response Scorecard
 
-GitHub Pages test build for the CONUS NOAA climate-region prototype.
+GitHub Pages test build for the CONUS NOAA climate-region and global regions prototypes. 
 
 ## Publish with GitHub Pages
 1. Create a public repository (for example `enso-terrestrial-carbon-dashboard`).
